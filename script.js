@@ -168,6 +168,38 @@ const SECTIONS = [
   }
 ];
 
+/* ---------- 카카오톡 등 앱 안 브라우저 → 크롬·사파리로 ---------- */
+const UA = navigator.userAgent || '';
+const IS_ANDROID = /Android/i.test(UA);
+const IS_IOS = /iPhone|iPad|iPod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const INAPP = [
+  [/KAKAOTALK/i, '카카오톡'], [/NAVER\(inapp/i, '네이버 앱'], [/Instagram/i, '인스타그램'],
+  [/FBAN|FBAV|FB_IAB/i, '페이스북'], [/BAND\//i, '밴드'], [/Line\//i, '라인'], [/DaumApps/i, '다음 앱'], [/everytimeApp/i, '에브리타임']
+].find(([re]) => re.test(UA));
+function openExternal() {
+  const url = location.href;
+  if (/KAKAOTALK/i.test(UA)) { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url); return true; }
+  if (IS_ANDROID) {
+    location.href = 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;end';
+    return true;
+  }
+  return false;
+}
+
+/* ---------- AI 앱 열기 주소 (안드로이드는 설치된 앱으로) ---------- */
+const AI_APPS = {
+  gpt: { web: 'https://chatgpt.com/', pkg: 'com.openai.chatgpt' },
+  gem: { web: 'https://gemini.google.com/app', pkg: 'com.google.android.apps.bard' }
+};
+function aiLink(k) {
+  const a = AI_APPS[k];
+  if (IS_ANDROID && !INAPP) {
+    const u = new URL(a.web);
+    return { href: `intent://${u.host}${u.pathname}#Intent;scheme=https;package=${a.pkg};S.browser_fallback_url=${encodeURIComponent(a.web)};end`, target: '_self' };
+  }
+  return { href: a.web, target: '_blank' };
+}
+
 const LV = {
   1: { emoji: '🌱', name: '쉬움' },
   2: { emoji: '🌿', name: '보통' },
@@ -281,8 +313,8 @@ function cardHTML(item) {
       </button>
       <div class="ai-links" hidden>
         <p class="ai-hint">👇 AI를 열고 입력창을 꾹 눌러 <b>붙여넣기</b> 해요</p>
-        <a class="ai-link gpt" href="https://chatgpt.com/" target="_blank" rel="noopener">💬 ChatGPT 열기</a>
-        <a class="ai-link gem" href="https://gemini.google.com/app" target="_blank" rel="noopener">✨ Gemini 열기</a>
+        <a class="ai-link gpt" href="${aiLink('gpt').href}" target="${aiLink('gpt').target}" rel="noopener">💬 ChatGPT 열기</a>
+        <a class="ai-link gem" href="${aiLink('gem').href}" target="${aiLink('gem').target}" rel="noopener">✨ Gemini 열기</a>
       </div>
     </article>`;
 }
@@ -496,6 +528,7 @@ function buildTOC() {
       ${subs ? `<ul class="toc-sub">${subs}</ul>` : ''}
     </li>`);
   });
+  rows.push(`<li class="toc-li"><a class="toc-item" href="#mypoem" data-sec="mypoem"><span class="ti-tag">2교시 ④</span><span class="ti-title">📜 내 시 크게 보기</span></a></li>`);
   rows.push(`<li class="toc-li"><a class="toc-item" href="#finish" data-sec="finish"><span class="ti-title">🎉 오늘의 마무리</span></a></li>`);
   document.querySelectorAll('.toc-list').forEach(n => { n.innerHTML = `<ol>${rows.join('')}</ol>`; });
 }
@@ -520,7 +553,7 @@ function updateProgress() {
 function setupTOC() {
   buildTOC();
   updateProgress();
-  const ids = ['how', ...SECTIONS.map(s => s.id), 'finish'];
+  const ids = ['how', ...SECTIONS.map(s => s.id), 'mypoem', 'finish'];
   const subIds = [];
   SECTIONS.forEach(sec => sec.groups.forEach((g, gi) => { if (g.title) subIds.push(`${sec.id}-g${gi}`); }));
   const miniNow = document.getElementById('miniNow');
@@ -543,7 +576,7 @@ function setupTOC() {
       document.querySelectorAll('.toc-li[data-li]').forEach(li => li.classList.toggle('open', li.dataset.li === now));
       const a = document.querySelector(`.toc-item[data-sec="${now}"]`);
       const sec = SECTIONS.find(s => s.id === now);
-      miniNow.textContent = sec ? `${sec.period} ${sec.icon} ${sec.title}` : (a ? a.querySelector('.ti-title').textContent : '');
+      miniNow.textContent = sec ? `${sec.period} ${sec.icon} ${sec.title}` : (a ? (a.querySelector('.ti-tag') ? a.querySelector('.ti-tag').textContent + ' ' : '') + a.querySelector('.ti-title').textContent : '');
       const act = side.querySelector('.toc-item.active');
       if (act && getComputedStyle(side).display !== 'none') {
         const top = act.offsetTop - side.clientHeight / 3;
@@ -581,6 +614,150 @@ function setupTOC() {
   });
   side.addEventListener('click', e => { if (e.target.closest('a')) play('click'); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !drawer.hidden) closeD(); });
+}
+
+/* ---------- 내 시 크게 보기 ---------- */
+function cleanPoem(raw) {
+  return raw.replace(/\r/g, '').split('\n')
+    .map(l => l.replace(/^\s*(#{1,6}\s*|>\s*|[-*•]\s+)/, '').replace(/\*\*|__/g, '').replace(/\s+$/, ''))
+    .join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+// 첫 줄이 제목처럼 생겼으면 제목으로 떼어내기 (**제목**, 「제목」, 제목: …)
+function splitTitle(raw) {
+  const lines = raw.replace(/\r/g, '').split('\n');
+  const i = lines.findIndex(l => l.trim());
+  if (i < 0) return { title: '', body: '' };
+  const first = lines[i].trim();
+  const m = first.match(/^(?:#{1,6}\s*)?(?:\*\*(.+?)\*\*|[「『《<〈"“](.+?)[」』》>〉"”]|제목\s*[:：]\s*(.+))$/);
+  if (m && lines.slice(i + 1).some(l => l.trim())) {
+    const t = (m[1] || m[2] || m[3] || '').replace(/^[「『《<〈"“]|[」』》>〉"”]$/g, '').trim();
+    return { title: t, body: lines.slice(i + 1).join('\n') };
+  }
+  return { title: '', body: raw };
+}
+
+function setupMyPoem() {
+  const $ = id => document.getElementById(id);
+  const title = $('mpTitle'), body = $('mpBody'), name = $('mpName'), saved = $('mpSaved');
+  const view = $('poemView'), paper = $('pvPaper');
+  let theme = 'autumn', k = 1, saveTimer;
+
+  try {
+    const d = JSON.parse(localStorage.getItem('poem-mine') || '{}');
+    title.value = d.title || ''; body.value = d.body || ''; name.value = d.name || '';
+    theme = d.theme || 'autumn';
+    if (d.body) saved.textContent = '💾 이 휴대폰에 저장된 시를 불러왔어요';
+  } catch (e) {}
+
+  const save = () => {
+    try {
+      localStorage.setItem('poem-mine', JSON.stringify({ title: title.value, body: body.value, name: name.value, theme }));
+      saved.textContent = body.value.trim() ? '💾 이 휴대폰에 저장했어요' : '';
+    } catch (e) {}
+  };
+  [title, body, name].forEach(el => el.addEventListener('input', () => { clearTimeout(saveTimer); saveTimer = setTimeout(save, 400); }));
+
+  const fill = raw => {
+    const sp = splitTitle(raw);
+    if (sp.title && !title.value.trim()) title.value = cleanPoem(sp.title);
+    body.value = cleanPoem(sp.title ? sp.body : raw);
+    save();
+  };
+  $('mpPaste').addEventListener('click', async () => {
+    play('click');
+    try {
+      const t = await navigator.clipboard.readText();
+      if (!t || !t.trim()) throw new Error('empty');
+      fill(t);
+      toast('📋 시를 붙여넣었어요!');
+    } catch (e) {
+      body.focus();
+      toast('✍️ 시 칸을 꾹 눌러 붙여넣기 해 주세요');
+    }
+  });
+  body.addEventListener('paste', () => setTimeout(() => {
+    if (!title.value.trim()) { const sp = splitTitle(body.value); if (sp.title) { title.value = cleanPoem(sp.title); body.value = cleanPoem(sp.body); save(); } }
+  }, 0));
+
+  $('mpClear').addEventListener('click', () => {
+    play('click');
+    if (!body.value && !title.value && !name.value) return;
+    if (!confirm('내 시를 모두 지울까요?')) return;
+    title.value = body.value = name.value = '';
+    save(); saved.textContent = '🗑️ 지웠어요';
+  });
+
+  const applyTheme = () => {
+    paper.className = 'pv-paper theme-' + theme;
+    view.querySelectorAll('.pv-theme').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.theme === theme)));
+  };
+  const render = () => {
+    const text = cleanPoem(body.value);
+    const lines = text.split('\n');
+    const count = lines.filter(l => l.trim()).length;
+    const base = count <= 6 ? 'clamp(1.5rem, 5.4vw, 2.3rem)' : count <= 10 ? 'clamp(1.35rem, 4.8vw, 2rem)' : count <= 16 ? 'clamp(1.2rem, 4.2vw, 1.7rem)' : 'clamp(1.05rem, 3.6vw, 1.45rem)';
+    paper.style.setProperty('--pvfs', base);
+    $('pvTitle').textContent = title.value.trim() || '나의 시';
+    $('pvBody').innerHTML = lines.map(l => l.trim() ? `<p>${escapeHTML(l.trim())}</p>` : '<div class="gap"></div>').join('');
+    $('pvName').textContent = name.value.trim() ? '— ' + name.value.trim() : '';
+  };
+  const open = () => {
+    if (!body.value.trim()) { play('click'); body.focus(); toast('✍️ 먼저 내 시를 붙여넣어 주세요'); return; }
+    play('copy');
+    render(); applyTheme();
+    view.style.setProperty('--pvk', k);
+    view.hidden = false; document.body.classList.add('no-scroll');
+    view.querySelector('.pv-stage').scrollTop = 0;
+    $('pvClose').focus();
+  };
+  const close = () => { stopSpeak(); view.hidden = true; document.body.classList.remove('no-scroll'); $('mpShow').focus(); };
+  $('mpShow').addEventListener('click', open);
+  $('pvClose').addEventListener('click', () => { play('click'); close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !view.hidden) close(); });
+  view.querySelectorAll('.pv-theme').forEach(b => b.addEventListener('click', () => { play('click'); theme = b.dataset.theme; applyTheme(); save(); }));
+  $('pvUp').addEventListener('click', () => { play('click'); k = Math.min(1.6, +(k + 0.1).toFixed(2)); view.style.setProperty('--pvk', k); });
+  $('pvDown').addEventListener('click', () => { play('click'); k = Math.max(0.7, +(k - 0.1).toFixed(2)); view.style.setProperty('--pvk', k); });
+  $('pvSpeak').addEventListener('click', e => {
+    play('click');
+    const lines = cleanPoem(body.value).split('\n').map(l => l.trim()).filter(Boolean).map(l => /[.!?…]$/.test(l) ? l : l + '.');
+    const t = title.value.trim();
+    speak(e.currentTarget, (t ? t + '. ' : '') + lines.join(' '));
+  });
+}
+
+/* ---------- QR코드 · 앱 안 안내 ---------- */
+function setupQRAndInApp() {
+  const qv = document.getElementById('qrView');
+  const openQ = () => { play('click'); qv.hidden = false; document.getElementById('qrClose').focus(); };
+  const closeQ = () => { play('click'); qv.hidden = true; };
+  document.getElementById('qrOpen').addEventListener('click', openQ);
+  document.getElementById('qrClose').addEventListener('click', closeQ);
+  qv.addEventListener('click', e => { if (e.target === qv) closeQ(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !qv.hidden) closeQ(); });
+
+  if (!INAPP) return;
+  const bn = document.getElementById('inappBanner');
+  let closed = false;
+  try { closed = sessionStorage.getItem('poem-inapp-closed') === '1'; } catch (e) {}
+  if (closed) return;
+  document.getElementById('inappName').textContent = INAPP[1];
+  const canOpen = /KAKAOTALK/i.test(UA) || IS_ANDROID;
+  if (!canOpen) {
+    document.getElementById('inappOpen').hidden = true;
+    document.getElementById('inappTip').textContent = IS_IOS ? '오른쪽 아래 ··· 또는 공유 버튼을 눌러 “Safari로 열기”를 골라 주세요.' : '메뉴에서 “다른 브라우저로 열기”를 골라 주세요.';
+  }
+  bn.hidden = false;
+  // 카카오톡이면 화면을 먼저 보여 준 뒤, 한 번만 자동으로 바깥 브라우저로 열기
+  if (/KAKAOTALK/i.test(UA)) {
+    let tried = false;
+    try { tried = sessionStorage.getItem('poem-escape') === '1'; sessionStorage.setItem('poem-escape', '1'); } catch (e) {}
+    if (!tried) setTimeout(openExternal, 600);
+  }
+  document.getElementById('inappOpen').addEventListener('click', () => { play('click'); openExternal(); });
+  document.getElementById('inappClose').addEventListener('click', () => {
+    play('click'); bn.hidden = true;
+    try { sessionStorage.setItem('poem-inapp-closed', '1'); } catch (e) {}
+  });
 }
 
 /* ---------- 효과음 (Web Audio, 파일 없이 재생) ---------- */
@@ -692,6 +869,8 @@ function sparkle(x, y) {
 document.addEventListener('DOMContentLoaded', () => {
   render();
   setupTOC();
+  setupMyPoem();
+  setupQRAndInApp();
   const area = document.getElementById('promptArea');
   if (!canSpeak) document.body.classList.add('no-speak');
   else { window.speechSynthesis.getVoices(); setupVoicePanel(); } // 목소리 미리 불러오기

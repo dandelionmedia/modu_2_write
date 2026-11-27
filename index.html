@@ -6,12 +6,23 @@
   <title>2차시 AI 시 창작 실습 프롬프트 | 모두사랑장애인야간학교 AI 디지털교육</title>
   <meta name="description" content="모두사랑장애인야간학교 AI 디지털교육 2차시 — 나의 이야기로 AI와 함께 짧은 시 한 편 만들기. 버튼 한 번으로 프롬프트를 복사해 ChatGPT·Gemini에 붙여넣어 사용하세요.">
   <meta name="theme-color" content="#FFF4E4">
-  <meta property="og:title" content="2차시 AI 시 창작 실습 프롬프트">
-  <meta property="og:description" content="나의 이야기로 AI와 함께 짧은 시 한 편 만들기 · 친절한유성쌤">
+  <link rel="canonical" href="https://dandelionmedia.github.io/modu_2_write/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%8D%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="유쌤클래스 · AI 디지털교육">
+  <meta property="og:url" content="https://dandelionmedia.github.io/modu_2_write/">
+  <meta property="og:title" content="2차시 AI 시 창작 교실 ✍️ 나의 이야기로 시 한 편 만들기">
+  <meta property="og:description" content="모두사랑장애인야간학교 AI 디지털교육 · 버튼 한 번으로 프롬프트를 복사해 ChatGPT·Gemini에 붙여넣어요.">
+  <meta property="og:image" content="https://dandelionmedia.github.io/modu_2_write/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="2차시 AI 시 창작 교실 — 나의 이야기로 AI 시 한 편 만들기">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://dandelionmedia.github.io/modu_2_write/og-image.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261127-7">
+  <link rel="stylesheet" href="style.css?v=20261127-8">
 </head>
 <body>
   <!-- 떨어지는 잎사귀 배경 -->
@@ -35,6 +46,15 @@
       <span class="mt-open">☰ 목차</span>
     </button>
   </header>
+
+  <!-- 카카오톡 등 앱 안에서 열었을 때 안내 -->
+  <div class="inapp-banner" id="inappBanner" hidden>
+    <p>📢 지금 <strong id="inappName">앱</strong> 안에서 보고 있어요.<br><span id="inappTip">크롬이나 사파리에서 열면 AI 앱 열기·읽어주기가 더 잘 돼요.</span></p>
+    <div class="ib-actions">
+      <button type="button" class="ib-open" id="inappOpen">🌐 다른 브라우저로 열기</button>
+      <button type="button" class="ib-close" id="inappClose" aria-label="안내 닫기">✕</button>
+    </div>
+  </div>
 
   <!-- PC: 왼쪽 따라다니는 목차 -->
   <aside class="side-toc" id="sideToc" aria-label="오늘의 공부 순서">
@@ -90,7 +110,10 @@
           <li>📱 ChatGPT · Gemini</li>
           <li>🎯 나만의 짧은 시 1편</li>
         </ul>
-        <a href="#how" class="cta">시작하기 <span aria-hidden="true">👇</span></a>
+        <div class="cta-row">
+          <a href="#how" class="cta">시작하기 <span aria-hidden="true">👇</span></a>
+          <button type="button" class="qr-btn" id="qrOpen">📱 QR코드로 열기</button>
+        </div>
       </div>
 
       <div class="hero-art reveal" aria-hidden="true">
@@ -160,10 +183,32 @@
       <a href="#s5">⑤ 다듬고 제목 짓기</a>
       <a href="#s6">⑥ 시화용 긴 시</a>
       <a href="#s7">⑦ 저장·낭독·감상</a>
+      <a href="#mypoem">⑧ 내 시 크게 보기</a>
     </nav>
 
     <!-- 프롬프트 영역 (script.js 에서 그려요) -->
     <div id="promptArea"></div>
+
+    <!-- ===== 내 시 크게 보기 ===== -->
+    <section class="prompt-sec mypoem" id="mypoem">
+      <span class="period-tag reveal">2교시 ④</span>
+      <h2 class="sec-title reveal"><span>📜</span>내 시 크게 보기</h2>
+      <p class="sec-desc reveal">AI가 써 준 시를 <strong>꾹 눌러 복사</strong>한 뒤, 아래 칸에 <strong>붙여넣기</strong> 해요.<br>예쁜 종이에 크게 보여 줘요. 낭독 연습을 하고 <strong>화면 캡처</strong>해 두면 다음 시간 <strong>시화</strong>에 쓸 수 있어요!</p>
+      <div class="mp-card reveal">
+        <button type="button" class="mp-btn paste" id="mpPaste">📋 복사한 시 붙여넣기</button>
+        <label class="mp-label" for="mpTitle">🏷️ 시 제목</label>
+        <input id="mpTitle" class="mp-input" type="text" placeholder="예) 가을 햇살" maxlength="40" enterkeyhint="next">
+        <label class="mp-label" for="mpBody">✍️ 내 시</label>
+        <textarea id="mpBody" class="mp-text" rows="8" placeholder="여기를 꾹 눌러 붙여넣기 해도 돼요"></textarea>
+        <label class="mp-label" for="mpName">🙋 지은이 <small>(별명도 좋아요 · 안 써도 돼요)</small></label>
+        <input id="mpName" class="mp-input" type="text" placeholder="예) 햇살 시인" maxlength="20" enterkeyhint="done">
+        <div class="mp-actions">
+          <button type="button" class="mp-btn show" id="mpShow">✨ 크게 보기</button>
+          <button type="button" class="mp-btn clear" id="mpClear">🗑️ 지우기</button>
+        </div>
+        <p class="mp-saved" id="mpSaved" aria-live="polite"></p>
+      </div>
+    </section>
 
     <!-- ===== 마무리 ===== -->
     <section class="finish reveal" id="finish">
@@ -187,9 +232,45 @@
     <span class="arrow" aria-hidden="true">▲</span>맨위
   </button>
 
+  <!-- 내 시 크게 보기 화면 -->
+  <div class="poem-view" id="poemView" role="dialog" aria-label="내 시 크게 보기" hidden>
+    <div class="pv-bar">
+      <div class="pv-themes" role="group" aria-label="종이 고르기">
+        <button type="button" class="pv-theme" data-theme="autumn" aria-pressed="true">🍁 가을</button>
+        <button type="button" class="pv-theme" data-theme="spring" aria-pressed="false">🌸 봄꽃</button>
+        <button type="button" class="pv-theme" data-theme="night" aria-pressed="false">🌙 밤하늘</button>
+      </div>
+      <div class="pv-tools">
+        <button type="button" class="pv-tool" id="pvDown" aria-label="글자 작게">가-</button>
+        <button type="button" class="pv-tool" id="pvUp" aria-label="글자 크게">가+</button>
+        <button type="button" class="pv-tool speak-btn pv-speak" id="pvSpeak" aria-label="시 읽어주기"><span aria-hidden="true">🔈</span> <span class="sp-label">읽어주기</span></button>
+        <button type="button" class="pv-tool pv-close" id="pvClose" aria-label="닫기">✕</button>
+      </div>
+    </div>
+    <div class="pv-stage">
+      <div class="pv-paper theme-autumn" id="pvPaper">
+        <span class="pv-deco d1" aria-hidden="true"></span><span class="pv-deco d2" aria-hidden="true"></span>
+        <h2 class="pv-title" id="pvTitle"></h2>
+        <div class="pv-body" id="pvBody"></div>
+        <p class="pv-name" id="pvName"></p>
+      </div>
+      <p class="pv-hint">📸 이 화면을 캡처해 두면 다음 시간 시화에 쓸 수 있어요!</p>
+    </div>
+  </div>
+
+  <!-- QR코드 -->
+  <div class="qr-view" id="qrView" role="dialog" aria-label="QR코드" hidden>
+    <div class="qr-card">
+      <button type="button" class="vp-close qr-close" id="qrClose" aria-label="닫기">✕</button>
+      <p class="qr-title">📱 휴대폰 카메라로 비춰 보세요!</p>
+      <img src="qr.png" alt="2차시 AI 시 창작 교실 주소 QR코드" width="360" height="360">
+      <p class="qr-url">dandelionmedia.github.io/modu_2_write</p>
+    </div>
+  </div>
+
   <!-- 복사 알림 -->
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="script.js?v=20261127-7"></script>
+  <script src="script.js?v=20261127-8"></script>
 </body>
 </html>
