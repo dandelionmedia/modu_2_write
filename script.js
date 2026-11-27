@@ -1,6 +1,7 @@
 /* =========================================================
    2차시 AI 시 창작 실습 프롬프트 — 동작
    ※ 프롬프트를 고치려면 아래 SECTIONS 안의 text 만 바꾸면 됩니다.
+     [보기1/보기2] = 고르기 버튼, [예시말] = 바꿔 쓰는 칸, [ ] = 꼭 써야 하는 칸
    lv: 1 = 🌱 쉬움 / 2 = 🌿 보통 / 3 = 🌳 도전
    ========================================================= */
 
@@ -60,7 +61,7 @@ const SECTIONS = [
       items: [
         { lv: 1, text: '나랑 같이 시를 만들자. 나에게 질문을 한 번에 하나씩, 모두 3개 해줘. 내가 다 대답하면 그걸로 5줄 시를 만들어줘.' },
         { lv: 1, text: '내가 좋아하는 것을 물어봐줘. 예 또는 아니오로 대답할 수 있게 질문해줘. 질문은 하나씩만 해줘.' },
-        { lv: 2, text: '보기를 3개 주고 고르게 해줘. 먼저 시의 주제를 [꽃/가족/음식] 중에서 고르게 해줘.' },
+        { lv: 2, text: '보기를 3개 주고 고르게 해줘. 먼저 시의 주제를 꽃, 가족, 음식 중에서 고르게 해줘.' },
         { lv: 2, text: '내가 고른 단어 3개로 시를 만들어줘. 단어는 [햇살], [엄마], [웃음]이야.' }
       ]
     }]
@@ -144,34 +145,113 @@ const LV = {
 const COPY_LABEL = '프롬프트 복사하기';
 const DONE_LABEL = '프롬프트 복사완료';
 
-/* ---------- 화면 그리기 ---------- */
+/* ---------- 빈칸 처리 ----------
+   [좋아요/보통이에요]  → 보기 버튼으로 고르기
+   [꽃]                → 입력칸 (처음엔 '꽃'이 들어 있음)
+   [ ]                 → 입력칸 (꼭 써야 함)
+   빈칸 뒤 조사(을/를, 이/가 …)는 바뀐 말에 맞게 자동으로 고쳐요. */
 function escapeHTML(s) {
   return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
-function highlight(text) {
-  return escapeHTML(text).replace(/\[([^\]]*)\]/g, '<mark>[$1]</mark>');
+
+function parseTemplate(text) {
+  const parts = text.split(/\[([^\]]*)\]/);
+  const segs = [];
+  parts.forEach((p, i) => {
+    if (i % 2 === 0) { segs.push({ t: 'text', v: p }); return; }
+    const inner = p.trim();
+    if (inner.includes('/')) segs.push({ t: 'choice', options: inner.split('/').map(o => o.trim()) });
+    else segs.push({ t: 'input', example: inner, required: inner === '' });
+  });
+  return segs;
+}
+
+// 받침 확인: true(받침 있음) / false(없음) / null(한글 아님)
+function batchim(word) {
+  const w = (word || '').trim();
+  if (!w) return null;
+  const code = w.charCodeAt(w.length - 1);
+  if (code < 0xAC00 || code > 0xD7A3) return null;
+  return (code - 0xAC00) % 28;
+}
+const JOSA = [['이라는', '라는'], ['이에요', '예요'], ['이야', '야'], ['으로', '로'], ['을', '를'], ['은', '는'], ['과', '와'], ['이', '가']];
+function fixJosa(value, following) {
+  const jong = batchim(value);
+  if (jong === null) return following;
+  for (const [withB, noB] of JOSA) {
+    const hit = following.startsWith(withB) ? withB : following.startsWith(noB) ? noB : null;
+    if (!hit) continue;
+    let right = jong > 0 ? withB : noB;
+    if (withB === '으로' && jong === 8) right = '로'; // ㄹ 받침은 '로'
+    return right + following.slice(hit.length);
+  }
+  return following;
+}
+
+function build(card) {
+  let plain = '', html = '', bi = 0, prev = null;
+  card.segs.forEach(seg => {
+    if (seg.t === 'text') {
+      const txt = prev !== null ? fixJosa(prev, seg.v) : seg.v;
+      plain += txt; html += escapeHTML(txt); prev = null;
+    } else {
+      const v = card.values[bi++];
+      if (v) { plain += v; html += `<mark>${escapeHTML(v)}</mark>`; prev = v; }
+      else { plain += '[ ]'; html += '<mark class="empty">[ 빈칸 ]</mark>'; prev = null; }
+    }
+  });
+  return { plain, html };
 }
 
 let cardId = 0;
-const TEXT_MAP = {};
+const CARDS = {};
+
+function blankBoxHTML(card) {
+  const blanks = card.segs.filter(s => s.t !== 'text');
+  if (!blanks.length) return '';
+  const choices = [], inputs = [];
+  blanks.forEach((s, i) => {
+    if (s.t === 'choice') {
+      choices.push(`<div class="chips" role="group" aria-label="보기 고르기">${s.options.map((o, k) =>
+        `<button type="button" class="chip" data-b="${i}" data-v="${escapeHTML(o)}" aria-pressed="${k === 0}">${escapeHTML(o)}</button>`).join('')}</div>`);
+    } else {
+      inputs.push(`<input class="blank-input" type="text" data-b="${i}" value="${escapeHTML(s.example)}"
+        placeholder="${s.required ? '여기에 내 말을 써요' : escapeHTML(s.example)}" aria-label="빈칸에 내 말 쓰기" enterkeyhint="done">`);
+    }
+  });
+  return `<div class="blank-box">
+      ${choices.length ? `<p class="blank-label">👆 마음에 드는 말을 하나 눌러요</p>${choices.join('')}` : ''}
+      ${inputs.length ? `<p class="blank-label">✏️ ${blanks.some(b => b.t === 'input' && b.required) ? '빈칸에 내 말을 써요' : '노란 글자를 내 말로 바꿔도 돼요'}</p><div class="blank-inputs">${inputs.join('')}</div>` : ''}
+    </div>`;
+}
+
 function cardHTML(item) {
   if (item.tip) {
     return `<div class="tip reveal"><span class="ico">${item.icon || '💡'}</span><p>${item.tip}</p></div>`;
   }
   const id = 'p' + (++cardId);
-  TEXT_MAP[id] = item.text; // 복사용 원문
+  const segs = parseTemplate(item.text);
+  const values = segs.filter(s => s.t !== 'text').map(s => s.t === 'choice' ? s.options[0] : s.example);
+  const card = CARDS[id] = { item, segs, values };
   const lv = LV[item.lv];
   return `
-    <article class="card lv-${item.lv} reveal">
+    <article class="card lv-${item.lv} reveal" id="${id}">
       <div class="card-top">
         <span class="lv-chip">${lv.emoji} ${lv.name}</span>
         ${item.kind ? `<span class="kind-chip">${item.kind}</span>` : ''}
+        <button class="speak-btn" type="button" aria-label="문장 읽어주기"><span aria-hidden="true">🔈</span> <span class="sp-label">읽어주기</span></button>
       </div>
-      <p class="prompt-text" id="${id}">${highlight(item.text)}</p>
+      <p class="prompt-text">${build(card).html}</p>
       ${item.note ? `<p class="card-note">${item.note}</p>` : ''}
-      <button class="copy-btn" type="button" data-target="${id}" aria-describedby="${id}">
+      ${blankBoxHTML(card)}
+      <button class="copy-btn" type="button">
         <span class="ico" aria-hidden="true">📋</span><span class="label">${COPY_LABEL}</span>
       </button>
+      <div class="ai-links" hidden>
+        <p class="ai-hint">👇 AI를 열고 입력창을 꾹 눌러 <b>붙여넣기</b> 해요</p>
+        <a class="ai-link gpt" href="https://chatgpt.com/" target="_blank" rel="noopener">💬 ChatGPT 열기</a>
+        <a class="ai-link gem" href="https://gemini.google.com/app" target="_blank" rel="noopener">✨ Gemini 열기</a>
+      </div>
     </article>`;
 }
 
@@ -196,8 +276,39 @@ function render() {
         ${next}
       </section>`;
   }).join('');
+}
 
-  return TEXT_MAP;
+/* ---------- 읽어주기 (휴대폰 음성) ---------- */
+const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+let speakingBtn = null;
+function koVoice() {
+  const vs = window.speechSynthesis.getVoices();
+  return vs.find(v => /ko[-_]KR/i.test(v.lang)) || vs.find(v => /^ko/i.test(v.lang)) || null;
+}
+function stopSpeak() {
+  if (!canSpeak) return;
+  window.speechSynthesis.cancel();
+  if (speakingBtn) {
+    speakingBtn.classList.remove('speaking');
+    speakingBtn.querySelector('.sp-label').textContent = '읽어주기';
+    speakingBtn.firstElementChild.textContent = '🔈';
+    speakingBtn = null;
+  }
+}
+function speak(btn, text) {
+  const again = speakingBtn === btn;
+  stopSpeak();
+  if (again) return; // 읽는 중에 다시 누르면 멈춤
+  const u = new SpeechSynthesisUtterance(text.replace(/\[ \]/g, '빈칸'));
+  u.lang = 'ko-KR';
+  u.rate = 0.85;
+  const v = koVoice(); if (v) u.voice = v;
+  u.onend = u.onerror = () => { if (speakingBtn === btn) stopSpeak(); };
+  speakingBtn = btn;
+  btn.classList.add('speaking');
+  btn.querySelector('.sp-label').textContent = '그만 읽기';
+  btn.firstElementChild.textContent = '🔊';
+  window.speechSynthesis.speak(u);
 }
 
 /* ---------- 효과음 (Web Audio, 파일 없이 재생) ---------- */
@@ -307,27 +418,89 @@ function sparkle(x, y) {
 
 /* ---------- 시작 ---------- */
 document.addEventListener('DOMContentLoaded', () => {
-  const TEXTS = render();
+  render();
+  const area = document.getElementById('promptArea');
+  if (!canSpeak) document.body.classList.add('no-speak');
+  else window.speechSynthesis.getVoices(); // 목소리 미리 불러오기
 
-  // 복사 버튼
-  document.getElementById('promptArea').addEventListener('click', async e => {
+  const cardOf = el => { const a = el.closest('.card'); return a ? [a, CARDS[a.id]] : [null, null]; };
+  const refresh = (art, card) => { art.querySelector('.prompt-text').innerHTML = build(card).html; };
+  const resetCopy = art => { // 빈칸을 바꾸면 다시 복사하도록 녹색으로 되돌림
+    if (!art.classList.contains('copied')) return;
+    art.classList.remove('copied');
+    const btn = art.querySelector('.copy-btn');
+    btn.classList.remove('done');
+    btn.querySelector('.label').textContent = COPY_LABEL;
+    btn.querySelector('.ico').textContent = '📋';
+    art.querySelector('.ai-links').hidden = true;
+  };
+
+  area.addEventListener('click', async e => {
+    // 보기 고르기
+    const chip = e.target.closest('.chip');
+    if (chip) {
+      const [art, card] = cardOf(chip);
+      card.values[+chip.dataset.b] = chip.dataset.v;
+      chip.parentElement.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
+      refresh(art, card); resetCopy(art); play('click');
+      return;
+    }
+    // 읽어주기
+    const sp = e.target.closest('.speak-btn');
+    if (sp) {
+      const [, card] = cardOf(sp);
+      play('click');
+      speak(sp, build(card).plain);
+      return;
+    }
+    // AI 열기
+    if (e.target.closest('.ai-link')) { play('click'); return; }
+    // 복사
     const btn = e.target.closest('.copy-btn');
     if (!btn) return;
+    const [art, card] = cardOf(btn);
     ripple(btn, e);
-    const ok = await copyText(TEXTS[btn.dataset.target]);
+    const empty = [...art.querySelectorAll('.blank-input')].find(i => !i.value.trim());
+    if (empty) {
+      play('click');
+      empty.classList.remove('need'); void empty.offsetWidth; empty.classList.add('need');
+      empty.focus();
+      toast('✏️ 빈칸에 내 말을 먼저 써 주세요');
+      return;
+    }
+    const ok = await copyText(build(card).plain);
     if (ok) {
       play('copy');
       btn.classList.add('done');
       btn.querySelector('.label').textContent = DONE_LABEL;
       btn.querySelector('.ico').textContent = '✅';
-      btn.closest('.card').classList.add('copied');
+      art.classList.add('copied');
+      art.querySelector('.ai-links').hidden = false;
       const r = btn.getBoundingClientRect();
       sparkle(r.left + r.width / 2, r.top + r.height / 2);
-      toast('📋 복사했어요! AI 입력창에 꾹 눌러 붙여넣기 하세요');
+      toast('📋 복사했어요! 아래 버튼으로 AI를 열어요');
     } else {
       play('click');
       toast('😢 복사가 안 됐어요. 글자를 꾹 눌러 직접 복사해 주세요');
     }
+  });
+
+  // 빈칸에 글자 쓰기
+  area.addEventListener('input', e => {
+    const inp = e.target.closest('.blank-input');
+    if (!inp) return;
+    const [art, card] = cardOf(inp);
+    card.values[+inp.dataset.b] = inp.value.trim();
+    inp.classList.remove('need');
+    refresh(art, card); resetCopy(art);
+  });
+  // 입력칸을 누르면 글자 전체 선택 → 바로 새로 쓰기 쉽게
+  area.addEventListener('focusin', e => {
+    const inp = e.target.closest('.blank-input');
+    if (inp) setTimeout(() => inp.select(), 0);
+  });
+  area.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.closest('.blank-input')) e.target.blur();
   });
 
   // 일반 버튼·링크 효과음

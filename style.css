@@ -482,6 +482,107 @@ mark.blank, .prompt-text mark {
 @keyframes ripple { to { transform: scale(4); opacity: 0; } }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
 
+/* ---- 빈칸 고르기 / 쓰기 ---- */
+.prompt-text mark.empty { background: #FFE1E1; color: var(--red-dark); }
+.blank-box {
+  background: #FFF9E6;
+  border: 3px dashed #F5C542;
+  border-radius: 20px;
+  padding: 14px 16px 16px;
+  display: grid; gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+}
+.blank-label { font-family: 'Jua', sans-serif; font-size: 1.15rem; color: #8A3B00; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  min-height: 56px;
+  padding: 8px 22px;
+  border-radius: 16px;
+  border: 3px solid #F5C542;
+  background: #fff;
+  color: var(--ink);
+  font-family: 'Jua', sans-serif;
+  font-size: 1.3rem;
+  cursor: pointer;
+  box-shadow: 0 5px 0 #E8B931;
+  transition: transform .1s, box-shadow .1s, background .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.chip:active { transform: translateY(5px); box-shadow: 0 0 0 #E8B931; }
+.chip[aria-pressed="true"] {
+  background: #FFD43B;
+  border-color: #D99A00;
+  box-shadow: 0 2px 0 #D99A00;
+  transform: translateY(3px);
+}
+.chip[aria-pressed="true"]::before { content: "✔ "; }
+.blank-inputs { display: flex; flex-wrap: wrap; gap: 10px; }
+.blank-input {
+  flex: 1 1 180px;
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  padding: 8px 16px;
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: max(1.3rem, 16px);
+  font-weight: 700;
+  color: #8A3B00;
+  background: #fff;
+  border: 3px solid #F5C542;
+  border-radius: 14px;
+}
+.blank-input::placeholder { color: #C9A25A; font-weight: 400; }
+.blank-input:focus { outline: 4px solid #2563EB; outline-offset: 2px; }
+.blank-input.need { border-color: var(--red); background: #FFF1F1; animation: shake .4s; }
+@keyframes shake { 25% { transform: translateX(-8px); } 50% { transform: translateX(8px); } 75% { transform: translateX(-4px); } }
+.chip:focus-visible, .speak-btn:focus-visible, .ai-link:focus-visible { outline: 4px solid #2563EB; outline-offset: 3px; }
+
+/* ---- 읽어주기 버튼 ---- */
+.speak-btn {
+  margin-left: auto;
+  min-height: 50px;
+  padding: 6px 16px;
+  border-radius: 14px;
+  border: 2px solid #C7B6F0;
+  background: #F4EEFF;
+  color: var(--plum);
+  font-family: 'Jua', sans-serif;
+  font-size: 1.12rem;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #C7B6F0;
+  transition: transform .1s, box-shadow .1s;
+  white-space: nowrap;
+}
+.speak-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #C7B6F0; }
+.speak-btn.speaking { background: var(--plum); color: #fff; border-color: var(--plum); box-shadow: 0 4px 0 #4B2A75; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { filter: brightness(1.25); } }
+.no-speak .speak-btn { display: none; }
+
+/* ---- AI 바로 열기 ---- */
+.ai-links { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; animation: slideIn .45s cubic-bezier(.2, 1.3, .4, 1); }
+.ai-links[hidden] { display: none; }
+@media (min-width: 900px) { .ai-links { max-width: 620px; } }
+@media (max-width: 360px) { .ai-links { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .ai-link { font-size: 1.15rem; } }
+.ai-hint { grid-column: 1 / -1; font-weight: 800; font-size: 1.08rem; color: var(--ink-soft); }
+.ai-hint b { color: var(--red-dark); }
+.ai-link {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 62px;
+  padding: 8px 12px;
+  border-radius: 18px;
+  color: #fff; text-decoration: none;
+  font-family: 'Jua', sans-serif;
+  font-size: 1.28rem;
+  text-align: center;
+  transition: transform .1s, box-shadow .1s;
+}
+.ai-link.gpt { background: linear-gradient(180deg, #44454F, #202123); box-shadow: 0 6px 0 #000; }
+.ai-link.gem { background: linear-gradient(135deg, #4285F4, #9B72CB 60%, #D96570); box-shadow: 0 6px 0 #34519E; }
+.ai-link:hover { filter: brightness(1.1); }
+.ai-link:active { transform: translateY(6px); box-shadow: none; }
+@keyframes slideIn { from { opacity: 0; transform: translateY(-14px) scale(.96); } to { opacity: 1; transform: none; } }
+
 /* 팁 박스 (복사 아닌 안내) */
 .tip {
   background: #EAF6FF;
