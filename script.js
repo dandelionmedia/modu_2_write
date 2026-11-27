@@ -331,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 일반 버튼·링크 효과음
-  document.querySelectorAll('.quicknav a, .cta, .tool-btn, .teacher summary').forEach(el => {
+  document.querySelectorAll('.quicknav a, .cta, .tool-btn').forEach(el => {
     el.addEventListener('click', () => play('click'));
   });
 

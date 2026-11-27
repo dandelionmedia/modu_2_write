@@ -250,7 +250,7 @@ em { font-style: normal; }
 .class-note { grid-column: 1 / -1; text-align: center; font-size: 1.15rem; font-weight: 700; }
 
 /* ============ 공통 섹션 ============ */
-.how, .prompt-sec, .finish, .teacher {
+.how, .prompt-sec, .finish {
   max-width: 1000px;
   margin: 0 auto;
   padding: 60px clamp(18px, 5vw, 48px) 10px;
@@ -517,20 +517,6 @@ mark.blank, .prompt-text mark {
 .finish-card h2 em { color: var(--coral); }
 .finish-card p { font-size: 1.2rem; }
 
-/* 강사용 메모 */
-.teacher { padding-top: 40px; }
-.teacher summary {
-  cursor: pointer;
-  font-family: 'Jua', sans-serif;
-  font-size: 1.25rem;
-  background: rgba(255,255,255,.8);
-  border: 2px solid var(--line);
-  border-radius: 18px;
-  padding: 14px 20px;
-  list-style-position: inside;
-}
-.teacher ul { list-style: none; background: rgba(255,255,255,.8); border-radius: 18px; padding: 18px 22px; margin-top: 10px; display: grid; gap: 10px; font-size: 1.02rem; }
-.teacher b { display: inline-block; color: var(--plum); margin-right: 8px; }
 
 /* ============ 푸터 ============ */
 .footer { text-align: center; padding: 60px 20px 120px; font-size: 1.05rem; color: var(--ink-soft); }
