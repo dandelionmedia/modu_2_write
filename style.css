@@ -340,7 +340,7 @@ mark.blank, .prompt-text mark {
   display: grid; gap: 10px;
   grid-template-columns: repeat(2, 1fr);
 }
-@media (min-width: 768px) { .quicknav { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 768px) { .quicknav { grid-template-columns: repeat(4, 1fr); } }
 .quicknav a {
   display: block;
   text-align: center;
