@@ -314,41 +314,69 @@ function render() {
    목소리 느낌은 높낮이(pitch)와 빠르기(rate)로 만들어요.
    실제 목소리 종류는 기기에 설치된 한국어 목소리에 따라 달라요. */
 const VOICE_PRESETS = [
-  { id: 'basic',  em: '🌸', name: '기본 목소리',   desc: '또박또박',     pitch: 1.0,  rate: 0.85 },
-  { id: 'slow',   em: '🐢', name: '아주 천천히',   desc: '느긋하게',     pitch: 1.0,  rate: 0.6 },
-  { id: 'bright', em: '🎈', name: '밝고 신나게',   desc: '통통 튀는',    pitch: 1.35, rate: 0.95 },
-  { id: 'calm',   em: '🌙', name: '차분하게',      desc: '시 낭독처럼',  pitch: 0.85, rate: 0.7 },
-  { id: 'low',    em: '🐻', name: '낮고 굵게',     desc: '듬직한',       pitch: 0.55, rate: 0.8 },
-  { id: 'kid',    em: '🐥', name: '귀여운 아이',   desc: '높고 맑은',    pitch: 1.8,  rate: 0.95 }
+  // pitch: 높낮이(0~2) · rate: 빠르기 · split: 끊어 읽기(숫자 = 몇 단어마다 쉬기) · gender: 기기에 있으면 고를 목소리
+  { id: 'basic',  em: '🌸', name: '기본 목소리', desc: '또박또박',    pitch: 1.0,  rate: 0.9,  split: 'sentence', gender: 'f',
+    hello: '안녕하세요! 또박또박 기본 목소리로 읽어 드릴게요.' },
+  { id: 'slow',   em: '🐢', name: '아주 천천히', desc: '느긋하게',    pitch: 1.0,  rate: 0.55, split: 2,          gender: 'f',
+    hello: '안녕하세요. 아주 천천히, 또박또박 읽어 드릴게요.' },
+  { id: 'bright', em: '🎈', name: '밝고 신나게', desc: '통통 튀는',   pitch: 1.5,  rate: 1.15, split: 'sentence', gender: 'f',
+    hello: '안녕하세요! 오늘도 신나게 시를 만들어 봐요!' },
+  { id: 'calm',   em: '🌙', name: '차분하게',    desc: '시 낭독처럼', pitch: 0.85, rate: 0.72, split: 4,          gender: 'f',
+    hello: '고요한 밤, 별빛 아래에서, 조용히 시를 읽어 드릴게요.' },
+  { id: 'low',    em: '🐻', name: '낮고 굵게',   desc: '듬직한',      pitch: 0.45, rate: 0.82, split: 'sentence', gender: 'm',
+    hello: '안녕하세요. 듬직한 곰 목소리로 읽어 드릴게요.' },
+  { id: 'kid',    em: '🐥', name: '귀여운 아이', desc: '높고 맑은',   pitch: 1.95, rate: 1.1,  split: 'sentence', gender: 'f',
+    hello: '안녕! 나는 귀여운 병아리 목소리야! 같이 시 만들자!' }
 ];
-const PREVIEW_TEXT = '안녕하세요! 오늘은 나만의 시를 만들어 봐요.';
+const MALE_RE = /injoon|hyunsu|bongjin|gookmin|minsu|jinho|male|남성|남자/i;
+const FEMALE_RE = /heami|sunhi|yuna|jimin|seohyeon|soonbok|yujin|sora|female|여성|여자/i;
 const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
 let speakingBtn = null;
 let voicePreset = 'basic';
-let voiceURI = '';
+let voiceURI = ''; // '' = 자동(목소리 느낌에 맞게)
+let speakSession = 0;
+let liveUtters = []; // 크롬에서 중간에 끊기지 않도록 붙잡아 두기
 try { voicePreset = localStorage.getItem('poem-voice') || 'basic'; voiceURI = localStorage.getItem('poem-voice-uri') || ''; } catch (e) {}
 
 function koVoices() {
   if (!canSpeak) return [];
   return window.speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
 }
-function pickVoice() {
-  const vs = koVoices();
-  return vs.find(v => v.voiceURI === voiceURI) || vs.find(v => /ko[-_]KR/i.test(v.lang)) || vs[0] || null;
-}
 function preset() { return VOICE_PRESETS.find(p => p.id === voicePreset) || VOICE_PRESETS[0]; }
+function pickVoice(p = preset()) {
+  const vs = koVoices();
+  if (!vs.length) return null;
+  if (voiceURI) { const chosen = vs.find(v => v.voiceURI === voiceURI); if (chosen) return chosen; }
+  if (p.gender === 'm') { const m = vs.find(v => MALE_RE.test(v.name)); if (m) return m; }
+  const f = vs.find(v => FEMALE_RE.test(v.name) && !MALE_RE.test(v.name));
+  return f || vs.find(v => !MALE_RE.test(v.name)) || vs[0];
+}
 
-function makeUtter(text, p = preset()) {
+// 목소리 느낌에 맞게 문장을 잘게 나누기 (쉬는 곳이 생겨요)
+function chunkText(text, split) {
+  const sentences = text.split(/(?<=[.!?])\s+/).map(t => t.trim()).filter(Boolean);
+  if (split === 'sentence') return sentences;
+  const out = [];
+  sentences.forEach(sen => {
+    sen.split(/(?<=,)\s*/).forEach(part => {
+      const words = part.split(/\s+/).filter(Boolean);
+      for (let i = 0; i < words.length; i += split) out.push(words.slice(i, i + split).join(' '));
+    });
+  });
+  return out;
+}
+
+function makeUtter(text, p, voice) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'ko-KR';
   u.rate = p.rate;
-  u.pitch = p.pitch;
-  const v = pickVoice(); if (v) { try { u.voice = v; } catch (e) {} }
+  // 실제 남자 목소리를 찾았으면 너무 낮지 않게
+  u.pitch = (p.gender === 'm' && voice && MALE_RE.test(voice.name)) ? 0.85 : p.pitch;
+  if (voice) { try { u.voice = voice; } catch (e) {} }
   return u;
 }
-function stopSpeak() {
-  if (!canSpeak) return;
-  window.speechSynthesis.cancel();
+
+function resetSpeakUI() {
   document.querySelectorAll('.vp-preset.playing').forEach(b => b.classList.remove('playing'));
   if (speakingBtn) {
     speakingBtn.classList.remove('speaking');
@@ -357,23 +385,43 @@ function stopSpeak() {
     speakingBtn = null;
   }
 }
+function stopSpeak() {
+  if (!canSpeak) return;
+  speakSession++;
+  window.speechSynthesis.cancel();
+  liveUtters = [];
+  resetSpeakUI();
+}
+
+// 문장 조각을 차례대로 읽기 (모두 한 번에 줄 세워서 휴대폰에서도 잘 되게)
+function speakText(text, p, onDone) {
+  const session = ++speakSession;
+  const voice = pickVoice(p);
+  const chunks = chunkText(text, p.split);
+  liveUtters = chunks.map(c => makeUtter(c, p, voice));
+  const finish = () => { if (session === speakSession) { liveUtters = []; onDone && onDone(); } };
+  if (!liveUtters.length) { finish(); return; }
+  liveUtters[liveUtters.length - 1].onend = finish;
+  liveUtters.forEach(u => { u.onerror = e => { if (e.error !== 'interrupted' && e.error !== 'canceled') finish(); }; });
+  liveUtters.forEach(u => window.speechSynthesis.speak(u));
+  if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+}
+
 function speak(btn, text) {
   const again = speakingBtn === btn;
   stopSpeak();
   if (again) return; // 읽는 중에 다시 누르면 멈춤
-  const u = makeUtter(text.replace(/\[ \]/g, '빈칸'));
-  u.onend = u.onerror = () => { if (speakingBtn === btn) stopSpeak(); };
   speakingBtn = btn;
   btn.classList.add('speaking');
   btn.querySelector('.sp-label').textContent = '그만 읽기';
   btn.firstElementChild.textContent = '🔊';
-  window.speechSynthesis.speak(u);
+  speakText(text.replace(/\[ \]/g, '빈칸'), preset(), resetSpeakUI);
 }
 function previewVoice(btn) {
   stopSpeak();
-  const u = makeUtter(PREVIEW_TEXT);
-  if (btn) { btn.classList.add('playing'); u.onend = u.onerror = () => btn.classList.remove('playing'); }
-  window.speechSynthesis.speak(u);
+  const p = preset();
+  if (btn) btn.classList.add('playing');
+  speakText(p.hello, p, resetSpeakUI);
 }
 
 function setupVoicePanel() {
@@ -392,8 +440,8 @@ function setupVoicePanel() {
     const vs = koVoices();
     if (vs.length < 2) { devBox.hidden = true; return; }
     devBox.hidden = false;
-    const cur = pickVoice();
-    sel.innerHTML = vs.map((v, i) => `<option value="${escapeHTML(v.voiceURI)}" ${cur && v.voiceURI === cur.voiceURI ? 'selected' : ''}>목소리 ${i + 1} · ${escapeHTML(v.name.replace(/Microsoft |Google |\(.*?\)/g, '').replace(/\s+/g, ' ').trim() || v.name)}</option>`).join('');
+    if (voiceURI && !vs.some(v => v.voiceURI === voiceURI)) voiceURI = '';
+    sel.innerHTML = `<option value="" ${voiceURI ? '' : 'selected'}>✨ 자동 (목소리 느낌에 맞게)</option>` + vs.map((v, i) => `<option value="${escapeHTML(v.voiceURI)}" ${v.voiceURI === voiceURI ? 'selected' : ''}>목소리 ${i + 1} · ${escapeHTML(v.name.replace(/Microsoft |Google |\(.*?\)/g, '').replace(/\s+/g, ' ').trim() || v.name)}</option>`).join('');
   };
   fillDevices();
   if (canSpeak && 'onvoiceschanged' in window.speechSynthesis) window.speechSynthesis.addEventListener('voiceschanged', fillDevices);
