@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2차시 AI 시 창작 실습 프롬프트 | 모두사랑장애인야간학교 AI 디지털교육</title>
+  <meta name="description" content="모두사랑장애인야간학교 AI 디지털교육 2차시 — 나의 이야기로 AI와 함께 짧은 시 한 편 만들기. 버튼 한 번으로 프롬프트를 복사해 ChatGPT·Gemini에 붙여넣어 사용하세요.">
+  <meta name="theme-color" content="#FFF4E4">
+  <meta property="og:title" content="2차시 AI 시 창작 실습 프롬프트">
+  <meta property="og:description" content="나의 이야기로 AI와 함께 짧은 시 한 편 만들기 · 친절한유성쌤">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 떨어지는 잎사귀 배경 -->
+  <div class="falling" id="falling" aria-hidden="true"></div>
+
+  <!-- 상단 도구 막대 -->
+  <header class="toolbar" id="toolbar">
+    <a class="brand" href="#top">✍️ <span>AI 시 창작 교실</span></a>
+    <div class="tools">
+      <button class="tool-btn" id="fontDown" type="button" aria-label="글자 작게">가<small>-</small></button>
+      <button class="tool-btn" id="fontUp" type="button" aria-label="글자 크게">가<b>+</b></button>
+      <button class="tool-btn sound-btn" id="soundToggle" type="button" aria-pressed="true" aria-label="효과음 끄기">🔊<span class="sr-label">소리 켜짐</span></button>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- ===== 히어로 ===== -->
+    <section class="hero">
+      <div class="hero-text reveal">
+        <p class="badge">모두사랑장애인야간학교 · AI 디지털교육</p>
+        <h1>
+          <span class="h1-small">2차시</span>
+          <span class="h1-big">나의 이야기로<br><em>AI 시</em> 한 편 만들기</span>
+        </h1>
+        <p class="hero-sub">좋아하는 것, 행복했던 추억, 오늘의 기분.<br>내 마음을 AI에게 말하면 <strong>시</strong>가 됩니다.</p>
+        <ul class="hero-meta">
+          <li>📅 2026. 11. 27.(금)</li>
+          <li>📱 ChatGPT · Gemini</li>
+          <li>🎯 나만의 짧은 시 1편</li>
+        </ul>
+        <a href="#how" class="cta">시작하기 <span aria-hidden="true">👇</span></a>
+      </div>
+
+      <div class="hero-art reveal" aria-hidden="true">
+        <div class="paper" id="tiltPaper">
+          <div class="paper-pin">📌</div>
+          <p class="paper-title">「 가을 햇살 」</p>
+          <p class="paper-lines" id="typePoem"></p>
+          <p class="paper-sign">— 나와 AI가 함께 쓴 시</p>
+        </div>
+        <span class="float f1">🍁</span>
+        <span class="float f2">🌸</span>
+        <span class="float f3">✏️</span>
+        <span class="float f4">💌</span>
+        <span class="float f5">🌙</span>
+      </div>
+    </section>
+
+    <!-- ===== 수업 시간 ===== -->
+    <section class="classes reveal">
+      <div class="class-card c1">
+        <span class="class-emoji">🌻</span>
+        <h3>가꿈반</h3>
+        <p>1~2교시</p>
+        <p class="time">15:30 ~ 16:55</p>
+      </div>
+      <div class="class-card c2">
+        <span class="class-emoji">🌷</span>
+        <h3>채움반</h3>
+        <p>3~4교시</p>
+        <p class="time">17:05 ~ 18:30</p>
+      </div>
+      <p class="class-note">두 반 모두 <strong>같은 내용</strong>으로 공부해요 😊</p>
+    </section>
+
+    <!-- ===== 사용 방법 ===== -->
+    <section class="how" id="how">
+      <h2 class="sec-title reveal"><span>📖</span> 이렇게 사용해요</h2>
+      <ol class="steps">
+        <li class="step reveal"><b>1</b><p>마음에 드는 문장을 <strong>하나</strong> 골라요.</p></li>
+        <li class="step reveal"><b>2</b><p><strong class="green-text">초록 버튼</strong>을 눌러 복사해요.</p></li>
+        <li class="step reveal"><b>3</b><p>ChatGPT나 Gemini 입력창을 <strong>꾹 눌러 붙여넣기</strong> 해요.</p></li>
+        <li class="step reveal"><b>4</b><p><mark class="blank">[ ]</mark> 안의 말을 <strong>내 이야기</strong>로 바꿔요.</p></li>
+        <li class="step reveal"><b>5</b><p>답이 어려우면 <strong>“더 쉽게 말해줘”</strong>라고 해요.</p></li>
+      </ol>
+
+      <div class="promise reveal" role="note">
+        <span class="promise-icon">⚠️</span>
+        <div>
+          <h3>우리의 약속</h3>
+          <p>내 <strong>이름 전체, 전화번호, 주소, 비밀번호</strong>는 AI에 쓰지 않아요.<br>가족·친구는 <strong>“엄마”, “친구”</strong>처럼 불러요.</p>
+        </div>
+      </div>
+
+      <div class="levels reveal">
+        <span class="lv lv1">🌱 쉬움<small>따라 말하기</small></span>
+        <span class="lv lv2">🌿 보통<small>빈칸 바꾸기</small></span>
+        <span class="lv lv3">🌳 도전<small>내 생각 더하기</small></span>
+      </div>
+    </section>
+
+    <!-- ===== 바로가기 ===== -->
+    <nav class="quicknav reveal" aria-label="바로가기">
+      <a href="#s1">① 마음 열기</a>
+      <a href="#s2">② 첫 시 만들기</a>
+      <a href="#s3">③ 인터뷰 시</a>
+      <a href="#s4">④ 시 모양 놀이</a>
+      <a href="#s5">⑤ 다듬고 제목 짓기</a>
+      <a href="#s6">⑥ 저장·낭독·감상</a>
+    </nav>
+
+    <!-- 프롬프트 영역 (script.js 에서 그려요) -->
+    <div id="promptArea"></div>
+
+    <!-- ===== 마무리 ===== -->
+    <section class="finish reveal">
+      <div class="finish-card">
+        <p class="finish-emoji">🎉</p>
+        <h2>오늘 나는 <em>시인</em>이 되었어요!</h2>
+        <p>완성한 시는 꼭 <strong>저장</strong>해 두세요.<br>다음 시간(12월 4일)에 <strong>시화 그림</strong>으로 만들어요. 🎨</p>
+      </div>
+    </section>
+
+    <details class="teacher reveal">
+      <summary>👩‍🏫 강사용 운영 메모 (눌러서 보기)</summary>
+      <ul>
+        <li><b>반복 운영</b> 가꿈반(1~2교시)·채움반(3~4교시) 모두 같은 프롬프트를 쓰고, 반 속도에 따라 🌱 → 🌿 → 🌳 순서로 넓혀 갑니다.</li>
+        <li><b>배포</b> 이 페이지 주소를 단체 채팅방에 올리고, 초록 버튼으로 복사 → 입력창에 붙여넣기 하도록 안내합니다.</li>
+        <li><b>읽기·쓰기 지원</b> 강사가 보기 3개를 읽어 주고 학습자가 말이나 손짓으로 고르면, 고른 단어로 ‘인터뷰 시’ 프롬프트를 대신 입력합니다.</li>
+        <li><b>학습자의 말 지키기</b> 학습자가 직접 한 말을 시에 최소 한 줄은 넣도록 “내 말은 그대로 써줘”를 함께 씁니다.</li>
+        <li><b>답이 길거나 어려울 때</b> 바로 “더 쉽게”, “3줄로”를 이어서 말하게 합니다.</li>
+        <li><b>동의</b> 낭독·사진 촬영·공유는 원하는 사람만, 사전 동의 후 진행합니다.</li>
+        <li><b>3차시(12.4.) 연결</b> 완성한 시를 꼭 저장해 두고, 마지막 ‘다음 시간 준비’ 프롬프트로 시화 그림을 준비합니다.</li>
+      </ul>
+    </details>
+  </main>
+
+  <footer class="footer">
+    <p><strong>김유성 강사</strong> · 친절한유성쌤</p>
+    <p>AI콘텐츠마케팅연구소 유쌤클래스</p>
+    <p class="copy">모두사랑장애인야간학교 AI 디지털교육 · 2차시 글쓰기·AI 시 창작</p>
+  </footer>
+
+  <!-- 맨위 버튼 (PC 화면) -->
+  <button class="to-top" id="toTop" type="button" aria-label="맨 위로 이동">
+    <span class="arrow" aria-hidden="true">▲</span>맨위
+  </button>
+
+  <!-- 복사 알림 -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
