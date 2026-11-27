@@ -290,8 +290,8 @@ function cardHTML(item) {
 function render() {
   const area = document.getElementById('promptArea');
   area.innerHTML = SECTIONS.map(sec => {
-    const groups = sec.groups.map(g => `
-      ${g.title ? `<h3 class="group-title reveal">${g.title}</h3>` : ''}
+    const groups = sec.groups.map((g, gi) => `
+      ${g.title ? `<h3 class="group-title reveal" id="${sec.id}-g${gi}">${g.title}</h3>` : ''}
       <div class="cards ${g.two ? 'two' : ''}">${g.items.map(cardHTML).join('')}</div>
     `).join('');
     const next = sec.next ? `
@@ -427,6 +427,114 @@ function setupVoicePanel() {
   });
 }
 
+/* ---------- 목차 (PC 왼쪽 / 태블릿·모바일 펼치기) ---------- */
+function buildTOC() {
+  const count = sec => sec.groups.reduce((n, g) => n + g.items.filter(i => !i.tip).length, 0) + (sec.next ? 1 : 0);
+  let lastPeriod = '';
+  const rows = [`<li class="toc-li"><a class="toc-item" href="#how" data-sec="how"><span class="ti-title">📖 이렇게 사용해요</span></a></li>`];
+  SECTIONS.forEach(sec => {
+    const period = sec.period.slice(0, 3); // '1교시' / '2교시'
+    if (period !== lastPeriod) {
+      rows.push(`<li class="toc-period">${period === '1교시' ? '🕐 1교시 · 첫 시 만들기' : '🕑 2교시 · 다듬고 완성하기'}</li>`);
+      lastPeriod = period;
+    }
+    const subs = sec.groups.map((g, gi) => g.title ? `<li><a href="#${sec.id}-g${gi}" data-sub="${sec.id}-g${gi}">${g.title}</a></li>` : '').join('');
+    rows.push(`<li class="toc-li" data-li="${sec.id}">
+      <a class="toc-item" href="#${sec.id}" data-sec="${sec.id}">
+        <span class="ti-tag">${sec.period}</span>
+        <span class="ti-title">${sec.icon} ${sec.title}</span>
+        <span class="ti-count" data-count="${sec.id}"><b>0</b>/${count(sec)}</span>
+      </a>
+      ${subs ? `<ul class="toc-sub">${subs}</ul>` : ''}
+    </li>`);
+  });
+  rows.push(`<li class="toc-li"><a class="toc-item" href="#finish" data-sec="finish"><span class="ti-title">🎉 오늘의 마무리</span></a></li>`);
+  document.querySelectorAll('.toc-list').forEach(n => { n.innerHTML = `<ol>${rows.join('')}</ol>`; });
+}
+
+function updateProgress() {
+  const total = document.querySelectorAll('#promptArea .card').length;
+  const done = document.querySelectorAll('#promptArea .card.copied').length;
+  document.querySelectorAll('.toc-progress').forEach(n => {
+    n.innerHTML = `<p class="tp-text"><span>✅ 복사한 문장</span><span><b>${done}</b> / ${total}</span></p><div class="tp-bar"><i style="width:${total ? done / total * 100 : 0}%"></i></div>`;
+  });
+  SECTIONS.forEach(sec => {
+    const el = document.getElementById(sec.id);
+    const n = el.querySelectorAll('.card.copied').length;
+    const all = el.querySelectorAll('.card').length;
+    document.querySelectorAll(`[data-count="${sec.id}"]`).forEach(c => {
+      c.innerHTML = `<b>${n}</b>/${all}`;
+      c.classList.toggle('full', n === all && all > 0);
+    });
+  });
+}
+
+function setupTOC() {
+  buildTOC();
+  updateProgress();
+  const ids = ['how', ...SECTIONS.map(s => s.id), 'finish'];
+  const subIds = [];
+  SECTIONS.forEach(sec => sec.groups.forEach((g, gi) => { if (g.title) subIds.push(`${sec.id}-g${gi}`); }));
+  const miniNow = document.getElementById('miniNow');
+  const side = document.getElementById('sideToc');
+  let current = '', currentSub = '';
+
+  const spy = () => {
+    const line = (document.getElementById('toolbar').offsetHeight || 80) + 60;
+    let now = 'how';
+    ids.forEach(id => { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top <= line) now = id; });
+    let sub = '';
+    subIds.forEach(id => {
+      if (!id.startsWith(now + '-')) return;
+      const el = document.getElementById(id);
+      if (el && el.getBoundingClientRect().top <= line + 40) sub = id;
+    });
+    if (now !== current) {
+      current = now;
+      document.querySelectorAll('.toc-item').forEach(a => a.classList.toggle('active', a.dataset.sec === now));
+      document.querySelectorAll('.toc-li[data-li]').forEach(li => li.classList.toggle('open', li.dataset.li === now));
+      const a = document.querySelector(`.toc-item[data-sec="${now}"]`);
+      const sec = SECTIONS.find(s => s.id === now);
+      miniNow.textContent = sec ? `${sec.period} ${sec.icon} ${sec.title}` : (a ? a.querySelector('.ti-title').textContent : '');
+      const act = side.querySelector('.toc-item.active');
+      if (act && getComputedStyle(side).display !== 'none') {
+        const top = act.offsetTop - side.clientHeight / 3;
+        side.scrollTo({ top, behavior: 'smooth' });
+      }
+    }
+    if (sub !== currentSub) {
+      currentSub = sub;
+      document.querySelectorAll('.toc-sub a').forEach(a => a.classList.toggle('active', a.dataset.sub === sub));
+    }
+  };
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { spy(); ticking = false; });
+  }, { passive: true });
+  window.addEventListener('resize', spy);
+  spy();
+
+  // 펼치는 목차 (태블릿·모바일)
+  const drawer = document.getElementById('tocDrawer');
+  const mini = document.getElementById('miniToc');
+  const openD = () => {
+    drawer.hidden = false; mini.setAttribute('aria-expanded', 'true'); document.body.classList.add('no-scroll');
+    const sheet = drawer.querySelector('.td-sheet');
+    const act = drawer.querySelector('.toc-item.active');
+    sheet.scrollTop = act ? Math.max(0, act.offsetTop - sheet.clientHeight / 3) : 0;
+  };
+  const closeD = () => { drawer.hidden = true; mini.setAttribute('aria-expanded', 'false'); document.body.classList.remove('no-scroll'); };
+  mini.addEventListener('click', () => { play('click'); openD(); });
+  drawer.addEventListener('click', e => {
+    if (e.target.closest('[data-close]')) { play('click'); closeD(); return; }
+    if (e.target.closest('a')) { play('click'); closeD(); }
+  });
+  side.addEventListener('click', e => { if (e.target.closest('a')) play('click'); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !drawer.hidden) closeD(); });
+}
+
 /* ---------- 효과음 (Web Audio, 파일 없이 재생) ---------- */
 let audioCtx = null;
 let soundOn = true;
@@ -535,6 +643,7 @@ function sparkle(x, y) {
 /* ---------- 시작 ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   render();
+  setupTOC();
   const area = document.getElementById('promptArea');
   if (!canSpeak) document.body.classList.add('no-speak');
   else { window.speechSynthesis.getVoices(); setupVoicePanel(); } // 목소리 미리 불러오기
@@ -549,6 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.querySelector('.label').textContent = COPY_LABEL;
     btn.querySelector('.ico').textContent = '📋';
     art.querySelector('.ai-links').hidden = true;
+    updateProgress();
   };
 
   area.addEventListener('click', async e => {
@@ -592,6 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.querySelector('.ico').textContent = '✅';
       art.classList.add('copied');
       art.querySelector('.ai-links').hidden = false;
+      updateProgress();
       const r = btn.getBoundingClientRect();
       sparkle(r.left + r.width / 2, r.top + r.height / 2);
       toast('📋 복사했어요! 아래 버튼으로 AI를 열어요');

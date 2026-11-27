@@ -19,6 +19,7 @@
 
   <!-- 상단 도구 막대 -->
   <header class="toolbar" id="toolbar">
+    <div class="tb-row">
     <a class="brand" href="#top">✍️ <span>AI 시 창작 교실</span></a>
     <div class="tools">
       <button class="tool-btn" id="fontDown" type="button" aria-label="글자 작게">가<small>-</small></button>
@@ -26,7 +27,38 @@
       <button class="tool-btn voice-btn" id="voiceBtn" type="button" aria-expanded="false" aria-controls="voicePanel" aria-label="읽어주기 목소리 고르기">🎙️</button>
       <button class="tool-btn sound-btn" id="soundToggle" type="button" aria-pressed="true" aria-label="효과음 끄기">🔊<span class="sr-label">소리 켜짐</span></button>
     </div>
+    </div>
+    <!-- 태블릿·모바일: 지금 공부하는 곳 -->
+    <button class="mini-toc" id="miniToc" type="button" aria-controls="tocDrawer" aria-expanded="false">
+      <span class="mt-label">지금 여기</span>
+      <span class="mt-now" id="miniNow">📖 이렇게 사용해요</span>
+      <span class="mt-open">☰ 목차</span>
+    </button>
   </header>
+
+  <!-- PC: 왼쪽 따라다니는 목차 -->
+  <aside class="side-toc" id="sideToc" aria-label="오늘의 공부 순서">
+    <div class="st-top">
+      <p class="st-head">📚 오늘의 공부 순서</p>
+      <div class="toc-progress"></div>
+    </div>
+    <nav class="toc-list"></nav>
+  </aside>
+
+  <!-- 태블릿·모바일: 펼쳐지는 목차 -->
+  <div class="toc-drawer" id="tocDrawer" hidden>
+    <div class="td-backdrop" data-close></div>
+    <div class="td-sheet" role="dialog" aria-label="오늘의 공부 순서">
+      <div class="td-top">
+        <div class="td-head">
+          <h2>📚 오늘의 공부 순서</h2>
+          <button class="vp-close" type="button" data-close aria-label="목차 닫기">✕</button>
+        </div>
+        <div class="toc-progress"></div>
+      </div>
+      <nav class="toc-list"></nav>
+    </div>
+  </div>
 
   <!-- 읽어주기 목소리 고르기 -->
   <div class="voice-panel" id="voicePanel" role="dialog" aria-label="읽어주기 목소리 고르기" hidden>
@@ -134,7 +166,7 @@
     <div id="promptArea"></div>
 
     <!-- ===== 마무리 ===== -->
-    <section class="finish reveal">
+    <section class="finish reveal" id="finish">
       <div class="finish-card">
         <p class="finish-emoji">🎉</p>
         <h2>오늘 나는 <em>시인</em>이 되었어요!</h2>
