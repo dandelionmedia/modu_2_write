@@ -23,9 +23,25 @@
     <div class="tools">
       <button class="tool-btn" id="fontDown" type="button" aria-label="글자 작게">가<small>-</small></button>
       <button class="tool-btn" id="fontUp" type="button" aria-label="글자 크게">가<b>+</b></button>
+      <button class="tool-btn voice-btn" id="voiceBtn" type="button" aria-expanded="false" aria-controls="voicePanel" aria-label="읽어주기 목소리 고르기">🎙️</button>
       <button class="tool-btn sound-btn" id="soundToggle" type="button" aria-pressed="true" aria-label="효과음 끄기">🔊<span class="sr-label">소리 켜짐</span></button>
     </div>
   </header>
+
+  <!-- 읽어주기 목소리 고르기 -->
+  <div class="voice-panel" id="voicePanel" role="dialog" aria-label="읽어주기 목소리 고르기" hidden>
+    <div class="vp-head">
+      <h2>🎙️ 읽어주기 목소리 고르기</h2>
+      <button class="vp-close" id="voiceClose" type="button" aria-label="닫기">✕</button>
+    </div>
+    <p class="vp-desc">누르면 바로 들려줘요. 마음에 드는 목소리를 골라요!</p>
+    <div class="vp-presets" id="voicePresets"></div>
+    <div class="vp-device" id="voiceDeviceBox" hidden>
+      <label for="voiceSelect">📱 내 기기에 있는 목소리</label>
+      <select id="voiceSelect"></select>
+    </div>
+    <button class="vp-done" id="voiceDone" type="button">✔ 이 목소리로 할게요</button>
+  </div>
 
   <main id="top">
     <!-- ===== 히어로 ===== -->
@@ -81,7 +97,7 @@
     <section class="how" id="how">
       <h2 class="sec-title reveal"><span>📖</span> 이렇게 사용해요</h2>
       <ol class="steps">
-        <li class="step reveal"><b>1</b><p>마음에 드는 문장을 <strong>하나</strong> 골라요. <strong>🔈 읽어주기</strong>를 누르면 소리로 들려줘요.</p></li>
+        <li class="step reveal"><b>1</b><p>마음에 드는 문장을 <strong>하나</strong> 골라요. <strong>🔈 읽어주기</strong>를 누르면 소리로 들려줘요. 목소리는 위쪽 <strong>🎙️ 버튼</strong>에서 골라요.</p></li>
         <li class="step reveal"><b>2</b><p><mark class="blank">노란 글자</mark>는 <strong>보기를 누르거나</strong> 내 말로 바꿔 써요.</p></li>
         <li class="step reveal"><b>3</b><p><strong class="green-text">초록 버튼</strong>을 눌러 복사해요.</p></li>
         <li class="step reveal"><b>4</b><p><strong>ChatGPT 열기</strong> 또는 <strong>Gemini 열기</strong>를 누르고, 입력창을 <strong>꾹 눌러 붙여넣기</strong> 해요.</p></li>

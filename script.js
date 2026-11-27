@@ -310,16 +310,46 @@ function render() {
   }).join('');
 }
 
-/* ---------- 읽어주기 (휴대폰 음성) ---------- */
+/* ---------- 읽어주기 (휴대폰 음성) ----------
+   목소리 느낌은 높낮이(pitch)와 빠르기(rate)로 만들어요.
+   실제 목소리 종류는 기기에 설치된 한국어 목소리에 따라 달라요. */
+const VOICE_PRESETS = [
+  { id: 'basic',  em: '🌸', name: '기본 목소리',   desc: '또박또박',     pitch: 1.0,  rate: 0.85 },
+  { id: 'slow',   em: '🐢', name: '아주 천천히',   desc: '느긋하게',     pitch: 1.0,  rate: 0.6 },
+  { id: 'bright', em: '🎈', name: '밝고 신나게',   desc: '통통 튀는',    pitch: 1.35, rate: 0.95 },
+  { id: 'calm',   em: '🌙', name: '차분하게',      desc: '시 낭독처럼',  pitch: 0.85, rate: 0.7 },
+  { id: 'low',    em: '🐻', name: '낮고 굵게',     desc: '듬직한',       pitch: 0.55, rate: 0.8 },
+  { id: 'kid',    em: '🐥', name: '귀여운 아이',   desc: '높고 맑은',    pitch: 1.8,  rate: 0.95 }
+];
+const PREVIEW_TEXT = '안녕하세요! 오늘은 나만의 시를 만들어 봐요.';
 const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
 let speakingBtn = null;
-function koVoice() {
-  const vs = window.speechSynthesis.getVoices();
-  return vs.find(v => /ko[-_]KR/i.test(v.lang)) || vs.find(v => /^ko/i.test(v.lang)) || null;
+let voicePreset = 'basic';
+let voiceURI = '';
+try { voicePreset = localStorage.getItem('poem-voice') || 'basic'; voiceURI = localStorage.getItem('poem-voice-uri') || ''; } catch (e) {}
+
+function koVoices() {
+  if (!canSpeak) return [];
+  return window.speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
+}
+function pickVoice() {
+  const vs = koVoices();
+  return vs.find(v => v.voiceURI === voiceURI) || vs.find(v => /ko[-_]KR/i.test(v.lang)) || vs[0] || null;
+}
+function preset() { return VOICE_PRESETS.find(p => p.id === voicePreset) || VOICE_PRESETS[0]; }
+
+function makeUtter(text, p = preset()) {
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ko-KR';
+  u.rate = p.rate;
+  u.pitch = p.pitch;
+  const v = pickVoice(); if (v) { try { u.voice = v; } catch (e) {} }
+  return u;
 }
 function stopSpeak() {
   if (!canSpeak) return;
   window.speechSynthesis.cancel();
+  document.querySelectorAll('.vp-preset.playing').forEach(b => b.classList.remove('playing'));
   if (speakingBtn) {
     speakingBtn.classList.remove('speaking');
     speakingBtn.querySelector('.sp-label').textContent = '읽어주기';
@@ -331,16 +361,70 @@ function speak(btn, text) {
   const again = speakingBtn === btn;
   stopSpeak();
   if (again) return; // 읽는 중에 다시 누르면 멈춤
-  const u = new SpeechSynthesisUtterance(text.replace(/\[ \]/g, '빈칸'));
-  u.lang = 'ko-KR';
-  u.rate = 0.85;
-  const v = koVoice(); if (v) u.voice = v;
+  const u = makeUtter(text.replace(/\[ \]/g, '빈칸'));
   u.onend = u.onerror = () => { if (speakingBtn === btn) stopSpeak(); };
   speakingBtn = btn;
   btn.classList.add('speaking');
   btn.querySelector('.sp-label').textContent = '그만 읽기';
   btn.firstElementChild.textContent = '🔊';
   window.speechSynthesis.speak(u);
+}
+function previewVoice(btn) {
+  stopSpeak();
+  const u = makeUtter(PREVIEW_TEXT);
+  if (btn) { btn.classList.add('playing'); u.onend = u.onerror = () => btn.classList.remove('playing'); }
+  window.speechSynthesis.speak(u);
+}
+
+function setupVoicePanel() {
+  const panel = document.getElementById('voicePanel');
+  const openBtn = document.getElementById('voiceBtn');
+  const box = document.getElementById('voicePresets');
+  const sel = document.getElementById('voiceSelect');
+  const devBox = document.getElementById('voiceDeviceBox');
+
+  box.innerHTML = VOICE_PRESETS.map(p => `
+    <button type="button" class="vp-preset" data-id="${p.id}" aria-pressed="${p.id === voicePreset}">
+      <span class="em" aria-hidden="true">${p.em}</span>${p.name}<small>${p.desc}</small>
+    </button>`).join('');
+
+  const fillDevices = () => {
+    const vs = koVoices();
+    if (vs.length < 2) { devBox.hidden = true; return; }
+    devBox.hidden = false;
+    const cur = pickVoice();
+    sel.innerHTML = vs.map((v, i) => `<option value="${escapeHTML(v.voiceURI)}" ${cur && v.voiceURI === cur.voiceURI ? 'selected' : ''}>목소리 ${i + 1} · ${escapeHTML(v.name.replace(/Microsoft |Google |\(.*?\)/g, '').replace(/\s+/g, ' ').trim() || v.name)}</option>`).join('');
+  };
+  fillDevices();
+  if (canSpeak && 'onvoiceschanged' in window.speechSynthesis) window.speechSynthesis.addEventListener('voiceschanged', fillDevices);
+
+  const open = () => { panel.hidden = false; openBtn.setAttribute('aria-expanded', 'true'); fillDevices(); };
+  const close = (stop = true) => { panel.hidden = true; openBtn.setAttribute('aria-expanded', 'false'); if (stop) stopSpeak(); };
+  openBtn.addEventListener('click', () => { play('click'); panel.hidden ? open() : close(); });
+  document.getElementById('voiceClose').addEventListener('click', () => { play('click'); close(); });
+  document.getElementById('voiceDone').addEventListener('click', () => {
+    play('click'); close();
+    const p = preset();
+    toast(`${p.em} '${p.name}'로 읽어 줄게요`);
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !panel.hidden) close(); });
+  document.addEventListener('click', e => {
+    if (!panel.hidden && !panel.contains(e.target) && !openBtn.contains(e.target)) close(false);
+  });
+
+  box.addEventListener('click', e => {
+    const b = e.target.closest('.vp-preset');
+    if (!b) return;
+    voicePreset = b.dataset.id;
+    try { localStorage.setItem('poem-voice', voicePreset); } catch (err) {}
+    box.querySelectorAll('.vp-preset').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    previewVoice(b);
+  });
+  sel.addEventListener('change', () => {
+    voiceURI = sel.value;
+    try { localStorage.setItem('poem-voice-uri', voiceURI); } catch (err) {}
+    previewVoice(box.querySelector('.vp-preset[aria-pressed="true"]'));
+  });
 }
 
 /* ---------- 효과음 (Web Audio, 파일 없이 재생) ---------- */
@@ -453,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
   render();
   const area = document.getElementById('promptArea');
   if (!canSpeak) document.body.classList.add('no-speak');
-  else window.speechSynthesis.getVoices(); // 목소리 미리 불러오기
+  else { window.speechSynthesis.getVoices(); setupVoicePanel(); } // 목소리 미리 불러오기
 
   const cardOf = el => { const a = el.closest('.card'); return a ? [a, CARDS[a.id]] : [null, null]; };
   const refresh = (art, card) => { art.querySelector('.prompt-text').innerHTML = build(card).html; };
